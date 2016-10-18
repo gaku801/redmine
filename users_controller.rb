@@ -190,30 +190,45 @@ class UsersController < ApplicationController
     logger.debug("=========================")
 
     logger.debug("===================update0-allclear-membership")
+    ### 親プロジェクトから一般ユーザを消す
     parent_pjts.each do |pjt|
       logger.debug(pjt.inspect)
-      u_membership = @user.memberships.all(:conditions => ["role_id = ? AND project_id = ?", role_id, pjt[:id]])
-      logger.debug(u_membership.to_yaml)
+      u_membership = @user.memberships.all(:conditions => ["project_id = ?", pjt[:id]])
+      logger.debug(u_membership)
       ### u_membershipにArrayで入るので
       if u_membership.present?
-         m = u_membership.first
-         logger.debug(m)
-         m_id = m[:id]
-         logger.debug(m_id)
+        m = u_membership.first
+        logger.debug(m)
+        logger.debug(m.roles)
+        #logger.debug(m.roles.map{|r| r[:id]})
+        #logger.debug(m.roles.select{|r| r[:id] != role_id})
+        old_roles = m.roles.map{|r| r[:id]}
+        new_roles = old_roles.select{|id| id != role_id}
+        logger.debug("*** change mID: #{m[:id]} / role: #{old_roles} => #{new_roles}")
+        #new_membership = {"project_id" => pjt[:id], "role_ids" => new_roles}
+        #logger.debug("*** memberships: #{new_membership}")
+        @membership = Member.edit_membership(m[:id], {"role_ids" => new_roles}, @user)
+        logger.debug("*** membership_edit: #{@membership.inspect}")
+        @membership.save
+      end
+      #   m_id = m[:id]
+      #   logger.debug(m_id)
       #  logger.debug(u_membership.to_yaml)
       #  logger.debug(u_membership.class)
       #  @membership = Member.find(u_membership[:id])
       #  logger.debug(@membership.to_yaml)
       ### role_idで絞る必要アリ
+      #@membership = Member.delete(["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
+      #logger.debug(@membership.to_yaml)
       #@membership = Member.find_by_project_id_and_user_id(pjt[:id], @user.id)
       #@membership = Member.all(:conditions => ["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
       #@membership = Member.find_by_project_id_and_user_id_and_role_id(pjt[:id], @user.id, role_id)
-        @membership = Member.find(m_id)
-        logger.debug(@membership.to_yaml)
-        if @membership.deletable?
-          @membership.destroy
-        end
-      end
+      #  @membership = Member.find(m_id)
+      #  logger.debug(@membership.to_yaml)
+      #  if @membership.deletable?
+      #    @membership.destroy
+      #  end
+      #end
     end
     logger.debug("=========================")
     logger.debug("===================update0-params(membership)")
