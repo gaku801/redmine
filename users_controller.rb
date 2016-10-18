@@ -134,117 +134,64 @@ class UsersController < ApplicationController
       @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
     end
 
-    logger.debug("===================update0")
-    logger.debug(params[:user])
-    parent_pjts = Project.all(:conditions => ["parent_id IS NULL"])
-    parent_pjts.each do |pjt|
-      logger.debug(pjt.inspect)
-    end
-    logger.debug("===================update0-1")
-    ### PJT名からIDを取ってくる方法
-    pjt_name = "インテリジェンス"
-    @project = Project.find_by_name(pjt_name)
-    logger.debug(@project.to_yaml)
-    pjt_id = @project[:id]
-    logger.debug("PJT-ID: #{pjt_id}")
-    logger.debug("===================update0-2")
-    ### CF名からIDを取ってくる方法
-    ucf_name = "所属プロジェクト"
-    #@user_custom_field = UserCustomField.find("239")
-    @user_custom_field = UserCustomField.find_by_name(ucf_name)
-    logger.debug(@user_custom_field.to_yaml)
-    cf_id = @user_custom_field[:id]
-    logger.debug("CF-ID: #{cf_id}")
-    logger.debug("===================update0-3")
-    ### 複数UserCFから、所属プロジェクトの値だけ取ってくる
-    cfs = params[:user][:custom_field_values]
-    cf_value = params[:user][:custom_field_values][cf_id.to_s]
-    logger.debug("CFs: #{cfs}")
-    logger.debug("CF-ID: #{cf_id}")
-    logger.debug("CF-value: #{cf_value}")
-    logger.debug("===================update0-4")
-    ### 所属プロジェクトのidを取得
-    cf_pjt = Project.find_by_name(cf_value)
-    logger.debug("CF-value: #{cf_value}")
-    logger.debug("PJT-ID: #{cf_pjt[:id]}")
-    logger.debug("PJT-Name: #{cf_pjt[:name]}")
-    logger.debug("===================update0-5")
-    ### 一般ユーザのidを取得
-    role_name = "一般ユーザ"
-    #role = Role.find("一般ユーザ")
-    #role = Role.find("14")
-    role = Role.find_by_name(role_name)
-    logger.debug(role.to_yaml)
-    role_id = role[:id]
-    logger.debug("role-id: #{role_id}")
-    logger.debug("===================update0-6")
-    ### DB上のCFvalueを取ってくる
-    logger.debug(@user.custom_field_values.to_yaml)
-    cv = @user.custom_field_values.detect {|c| c.custom_field.name == ucf_name}
-    logger.debug("cv on DB: #{cv}")
-    if cv != cf_value
-      logger.debug("--------")
-      logger.debug("changed: #{cv} => #{cf_value}")
-      logger.debug("--------")
-    end
-    logger.debug("=========================")
+    #testmess
+    role_auto
 
-    logger.debug("===================update0-allclear-membership")
+    #logger.debug("===================update0-allclear-membership")
     ### 親プロジェクトから一般ユーザを消す
-    parent_pjts.each do |pjt|
-      logger.debug(pjt.inspect)
-      u_membership = @user.memberships.all(:conditions => ["project_id = ?", pjt[:id]])
-      logger.debug(u_membership)
-      ### u_membershipにArrayで入るので
-      if u_membership.present?
-        m = u_membership.first
-        logger.debug(m)
-        logger.debug(m.roles)
-        #logger.debug(m.roles.map{|r| r[:id]})
-        #logger.debug(m.roles.select{|r| r[:id] != role_id})
-        old_roles = m.roles.map{|r| r[:id]}
-        new_roles = old_roles.select{|id| id != role_id}
-        logger.debug("*** change mID: #{m[:id]} / role: #{old_roles} => #{new_roles}")
-        #new_membership = {"project_id" => pjt[:id], "role_ids" => new_roles}
-        #logger.debug("*** memberships: #{new_membership}")
-        @membership = Member.edit_membership(m[:id], {"role_ids" => new_roles}, @user)
-        logger.debug("*** membership_edit: #{@membership.inspect}")
-        @membership.save
-      end
-      #   m_id = m[:id]
-      #   logger.debug(m_id)
-      #  logger.debug(u_membership.to_yaml)
-      #  logger.debug(u_membership.class)
-      #  @membership = Member.find(u_membership[:id])
-      #  logger.debug(@membership.to_yaml)
-      ### role_idで絞る必要アリ
-      #@membership = Member.delete(["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
-      #logger.debug(@membership.to_yaml)
-      #@membership = Member.find_by_project_id_and_user_id(pjt[:id], @user.id)
-      #@membership = Member.all(:conditions => ["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
-      #@membership = Member.find_by_project_id_and_user_id_and_role_id(pjt[:id], @user.id, role_id)
-      #  @membership = Member.find(m_id)
-      #  logger.debug(@membership.to_yaml)
-      #  if @membership.deletable?
-      #    @membership.destroy
-      #  end
-      #end
-    end
-    logger.debug("=========================")
-    logger.debug("===================update0-params(membership)")
-    #params[:membership] = {"project_id"=>"26", "role_ids"=>["14"]}
-    params[:membership] = {"project_id"=>cf_pjt[:id].to_s, "role_ids"=>[role[:id].to_s]}
-    logger.debug(params.to_yaml)
-    logger.debug("===================update0-@membership<-params")
-    @membership = Member.edit_membership(params[:membership_id], params[:membership], @user)
-    logger.debug(@membership.to_yaml)
-    logger.debug("===================update0-membership.save")
-    @membership.save
-    logger.debug("===================update0-membership.load")
-    #@memberships = @user.memberships.all(:conditions => Project.visible_condition(User.current))
-    @memberships = @user.memberships
-    logger.debug(@memberships.to_yaml)
-    logger.debug("=========================")
+    #parent_pjts.each do |pjt|
+    #  logger.debug(pjt.inspect)
+    #  u_membership = @user.memberships.all(:conditions => ["project_id = ?", pjt[:id]])
+    #  logger.debug(u_membership)
+    #  ### u_membershipにArrayで入るので
+    #  if u_membership.present?
+    #    m = u_membership.first
+    #    logger.debug(m)
+    #    logger.debug(m.roles)
+    #    #logger.debug(m.roles.map{|r| r[:id]})
+    #    #logger.debug(m.roles.select{|r| r[:id] != role_id})
+    #    old_roles = m.roles.map{|r| r[:id]}
+    #    new_roles = old_roles.select{|id| id != role_id}
+    #    logger.debug("*** change mID: #{m[:id]} / role: #{old_roles} => #{new_roles}")
+    #    if old_roles != new_roles
+    #      @membership = Member.edit_membership(m[:id], {"role_ids" => new_roles}, @user)
+    #      logger.debug("*** membership_edit: #{@membership.inspect}")
+    #      @membership.save
+    #    end
+    #  end
+    #  #   m_id = m[:id]
+    #  #   logger.debug(m_id)
+    #  #  logger.debug(u_membership.to_yaml)
+    #  #  logger.debug(u_membership.class)
+    #  #  @membership = Member.find(u_membership[:id])
+    #  #  logger.debug(@membership.to_yaml)
+    #  ### role_idで絞る必要アリ
+    #  #@membership = Member.delete(["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
+    #  #logger.debug(@membership.to_yaml)
+    #  #@membership = Member.find_by_project_id_and_user_id(pjt[:id], @user.id)
+    #  #@membership = Member.all(:conditions => ["project_id = ? AND user_id = ? AND role_id = ?", pjt[:id], @user.id, role_id])
+    #  #@membership = Member.find_by_project_id_and_user_id_and_role_id(pjt[:id], @user.id, role_id)
+    #  #  @membership = Member.find(m_id)
+    #  #  logger.debug(@membership.to_yaml)
+    #  #  if @membership.deletable?
+    #  #    @membership.destroy
+    #  #  end
+    #  #end
+    #end
+    #logger.debug("=========================")
+    #logger.debug("===================update0-params(membership)")
+    #params[:membership] = {"project_id"=>cf_pjt[:id].to_s, "role_ids"=>[role[:id].to_s]}
+    #logger.debug(params.to_yaml)
+    #logger.debug("===================update0-@membership<-params")
+    #@membership = Member.edit_membership(params[:membership_id], params[:membership], @user)
+    #logger.debug(@membership.to_yaml)
+    #logger.debug("===================update0-membership.save")
+    #@membership.save
+    #logger.debug("===================update0-membership.load")
+    ##@memberships = @user.memberships.all(:conditions => Project.visible_condition(User.current))
+    #@memberships = @user.memberships
+    #logger.debug(@memberships.to_yaml)
+    #logger.debug("=========================")
 
     @user.safe_attributes = params[:user]
     # Was the account actived ? (do it before User#save clears the change)
@@ -336,5 +283,160 @@ class UsersController < ApplicationController
     end
   rescue ActiveRecord::RecordNotFound
     render_404
+  end
+
+  def role_auto
+    logger.debug("################ role_auto #################")
+
+    logger.debug("----- 画面選択した所属プロジェクトが変更されたか？")
+    if !defined?(@ucf_id)
+      ucf_name = "所属プロジェクト"
+      @ucf_id = UserCustomField.find_by_name(ucf_name)[:id]
+      logger.debug("### first: #{ucf_name} => #{@ucf_id}")
+    end
+    input_cfv = params[:user][:custom_field_values][@ucf_id.to_s]
+    user_cfv = @user.custom_field_values.detect{|c| c.custom_field.name == ucf_name}
+    if user_cfv.to_s == input_cfv
+      logger.debug("*** CF-value NotChanged: #{user_cfv} => #{input_cfv}")
+    else
+      logger.debug("*** CF-value has changed: #{user_cfv} => #{input_cfv}")
+
+      if !defined?(@thd_pjt_id)
+        logger.debug("----- THDのPJT-ID取得")
+        thd_pjt_name = "THD"
+        @thd_pjt_id = Project.find_by_name(thd_pjt_name)[:id]
+        logger.debug("### first: #{thd_pjt_name} => #{@thd_pjt_id}")
+      end
+
+      if !defined?(@ippan_role_id)
+        logger.debug("----- 一般ユーザのRole-idを取得")
+        ippan_role_name = "一般ユーザ"
+        @ippan_role_id = Role.find_by_name(ippan_role_name)[:id]
+        logger.debug("### first: #{ippan_role_name} => #{@ippan_role_id}")
+      end
+
+      logger.debug("----- 親ディレクトリのリスト取得")
+      parent_pjts = Project.all(:conditions => ["parent_id IS NULL"])
+
+      logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
+      parent_pjts.each do |pjt|
+        u_memberships = @user.memberships.all(:conditions => ["project_id = ?", pjt[:id]])
+        if u_memberships.present?
+          u_m = u_memberships.first
+          m_id = u_m[:id]
+          role_ids = u_m.roles.map{|r| r[:id]}
+          logger.debug("*** PJT: #{pjt[:id]} - #{pjt[:name]}, M_ID: #{m_id}, Roles: #{role_ids}")
+          if role_ids.delete(@ippan_role_id)
+            logger.debug("----- ロール一覧から一般ユーザを削除")
+            logger.debug("*** change role_ids => #{role_ids}")
+            membership = Member.edit_membership(m_id, {"role_ids" => role_ids}, @user)
+            membership.save
+          end
+        end
+      end
+
+      if input_cfv?
+        logger.debug("*** cfv is null: #{input_cfv}")
+      else
+        logger.debug("----- THDに一般ユーザを付与")
+        logger.debug("----- 所属プロジェクトに一般ユーザを付与")
+      end
+
+    end
+
+    logger.debug("###########################################")
+  end
+
+  def testmess
+    logger.debug("################ testmess #################")
+    logger.debug(@user.to_yaml)
+    logger.debug(params.to_yaml)
+
+    logger.debug("----- 親ディレクトリのリスト取得")
+    parent_pjts = Project.all(:conditions => ["parent_id IS NULL"])
+    parent_pjts.each do |pjt|
+      logger.debug(pjt.inspect)
+    end
+
+    logger.debug("----- PJT名からPJT-IDを取ってくる")
+    pjt_name = "THD"
+    project = Project.find_by_name(pjt_name)
+    pjt_id = project[:id]
+    logger.debug("#{pjt_name} => #{pjt_id}")
+
+    logger.debug("----- 一般ユーザのRole-idを取得")
+    role_name = "一般ユーザ"
+    role = Role.find_by_name(role_name)
+    role_id = role[:id]
+    logger.debug("#{role_name} => #{role_id}")
+
+    logger.debug("----- CF名からCF-IDを取ってくる方法")
+    ucf_name = "所属プロジェクト"
+    user_custom_field = UserCustomField.find_by_name(ucf_name)
+    cf_id = user_custom_field[:id]
+    logger.debug("#{ucf_name} => #{cf_id}")
+
+    logger.debug("----- 画面入力した複数UserCFから、所属プロジェクトの値だけ抜く")
+    cfs = params[:user][:custom_field_values]
+    cf_value = params[:user][:custom_field_values][cf_id.to_s]
+    logger.debug("CFs: #{cfs}")
+    logger.debug("CF-ID: #{cf_id}")
+    logger.debug("CF-value: #{cf_value}")
+
+    logger.debug("----- 画面選択した所属プロジェクトが変更されたか？")
+    cv = @user.custom_field_values.detect{|c| c.custom_field.name == ucf_name}
+    logger.debug("cv on DB: #{cv}")
+    logger.debug(cv.class)
+    logger.debug(cf_value.class)
+    if cv.to_s != cf_value
+      logger.debug("CF-value has changed: #{cv} => #{cf_value}")
+    else
+      logger.debug("CF-value NotChanged: #{cv} => #{cf_value}")
+    end
+
+    logger.debug("----- 画面選択した所属プロジェクトのidを取得")
+    cf_pjt = Project.find_by_name(cf_value)
+    logger.debug("CF-value: #{cf_value}")
+    logger.debug("PJT-ID: #{cf_pjt[:id]} / PJT-Name: #{cf_pjt[:name]}")
+
+    logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
+    @new_memberships = {}
+    parent_pjts.each do |pjt|
+      logger.debug("*** PName: #{pjt[:name]} /  PID: #{pjt[:id]}")
+      u_memberships = @user.memberships.all(:conditions => ["project_id = ?", pjt[:id]])
+      if u_memberships.present?
+        u_m = u_memberships.first
+        m_id = u_m[:id]
+        roles = u_m.roles
+        roleids = roles.map{|r| r[:id]}
+        logger.debug("--> #{roles}")
+        logger.debug("--> M_ID: #{m_id} / Roles: #{roleids}")
+        @new_memberships[pjt[:id]] = {
+          :membership_id => m_id,
+          :role_ids => roleids
+        }
+      else
+        logger.debug("--> Not asignee")
+        @new_memberships[pjt[:id]] = {
+          :membership_id => nil,
+          :project_id => pjt[:id],
+          :role_ids => []
+        }
+      end
+      logger.debug(@new_memberships.to_yaml)
+    end
+
+    logger.debug("----- ロール一覧から一般ユーザを削除")
+    @new_memberships.each do |k, v|
+      logger.debug("#{k} : #{v}")
+      if v[:role_ids].delete(role_id)
+        logger.debug("*** change role_ids => #{v[:role_ids]}")
+        #membership = Member.edit_membership(v[:membership_id], {"role_ids" => v[:role_ids]}, @user)
+        #membership.save
+      end
+    end
+    logger.debug(@new_memberships.to_yaml)
+
+    logger.debug("###########################################")
   end
 end
