@@ -1,0 +1,11 @@
+<div class="contextual">
+<%= link_to l(:label_user_new), new_user_path, :class => 'icon icon-add' %>
+</div>
+
+<%# render_tabs parent_pjts_tabs %>
+<%# render_tabs_users parent_pjts_tabs %>
+<%#= render :partial => 'users/tabs_users', :locals => { :f => f } %>
+<%#= render :partial => 'users/tabs_users' %>
+<%= render_tabs_users %>
+
+<% html_title(l(:label_user_plural)) -%>
