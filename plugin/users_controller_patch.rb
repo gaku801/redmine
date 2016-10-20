@@ -89,7 +89,7 @@ module UsersControllerPatch
 
     def is_exist_and_get_id(cls, name)
       ins = cls.find_by_name(name)
-      logger.debug("***** is_exist?: `#{name}` in #{cls}")
+      logger.debug("*** is_exist?: `#{name}` in #{cls}")
       if ins.nil?
         logger.error("ERROR: cannot found `#{name}` in #{cls}.")
         return nil
@@ -103,33 +103,31 @@ module UsersControllerPatch
       thd_pjt_name ||= "THD"
       ippan_role_name ||= "一般ユーザ"
 
-      logger.debug("----- 各種ID取得")
+      ### UserCustomField: `#{corp_ucf_name}` の存在チェック, 無かったら終了
       corp_ucf_id ||= is_exist_and_get_id(UserCustomField, corp_ucf_name) || return
-      thd_pjt_id ||= is_exist_and_get_id(Project, thd_pjt_name)
-      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name)
-      logger.debug("### first: #{corp_ucf_name} => #{corp_ucf_id}")
-      logger.debug("### first: #{thd_pjt_name} => #{thd_pjt_id}")
-      logger.debug("### first: #{ippan_role_name} => #{ippan_role_id}")
+      logger.debug("*** UserCustomField is `#{corp_ucf_name}`, ID=`#{corp_ucf_id}`")
 
+      ### 所属未変更の場合はここで終了
       logger.debug("----- 画面選択した所属プロジェクトが変更されたか？")
       input_ucf_val = params[:user][:custom_field_values][corp_ucf_id.to_s]
       user_ucf_val = @user.custom_field_values.detect{|c| c.custom_field.name == corp_ucf_name}
-      logger.debug("*** CF-value: #{user_ucf_val} => #{input_ucf_val}")
-
-      ### 所属未変更の場合はここで終了
+      logger.debug("*** UCF-value: `#{user_ucf_val}` => `#{input_ucf_val}`")
       return true if user_ucf_val.to_s == input_ucf_val
 
       ### 親プロジェクトから一般ユーザを削除
+      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name)
+      logger.debug("*** reset Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
+
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
       parent_pjts = Project.where(parent_id: nil)
       parent_pjts.each do |pjt|
         m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
-        logger.debug("*** get_user_roles_by_projectid(#{pjt[:id]}) => #{[m_id, role_ids]}")
+        logger.debug("*** get roles in #{pjt[:name]}(ID: #{pjt[:id]}) => #{[m_id, role_ids]}")
 
         ### 親プロジェクトにアサイン＆一般ユーザが存在の場合
         if m_id.present? && role_ids.delete(ippan_role_id)
-          logger.debug("----- ロール一覧から一般ユーザを削除")
-          logger.debug("*** change role_ids => #{role_ids}")
+          logger.debug("----- 一般ユーザを削除: #{pjt[:name]}")
+          logger.debug("*** changed role_ids: #{role_ids}")
           membership = Member.edit_membership(m_id, {"role_ids" => role_ids}, @user)
           membership.save
         end
@@ -139,15 +137,18 @@ module UsersControllerPatch
       return true unless input_ucf_val.present?
 
       ### 選択した所属に従って、親プロジェクトに一般ユーザを付与
+      thd_pjt_id ||= is_exist_and_get_id(Project, thd_pjt_name)
+      logger.debug("*** all allowed Project is `#{thd_pjt_name}`, ID=`#{thd_pjt_id}`")
+
       parent_pjts.each do |pjt|
         ### I'm THD. all PJTs OK.
         ### We're allowed THD-PJT.
         ### I'm allowed only My-PJT.
         if input_ucf_val == thd_pjt_name || pjt[:name] == thd_pjt_name || pjt[:name] == input_ucf_val
-          logger.debug("----- 一般ユーザを付与 #{pjt[:name]}")
+          logger.debug("----- 一般ユーザを付与: #{pjt[:name]}")
           m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
           role_ids.push(ippan_role_id)
-          logger.debug("--> M_ID: #{m_id} / Roles: #{role_ids}")
+          logger.debug("*** update Role: M_ID: #{m_id}, Roles: #{role_ids}")
           membership = Member.edit_membership(m_id, {"project_id"=>pjt[:id], "role_ids" => role_ids}, @user)
           membership.save
         end
