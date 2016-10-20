@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 #require 'redmine'
 require 'users_controller_patch'
 

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 
 module UsersControllerPatch
   def self.included(base) # :nodoc:
@@ -111,7 +111,7 @@ module UsersControllerPatch
 
       ### 親プロジェクトから一般ユーザを削除
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
-      parent_pjts = Project.all(:conditions => ["parent_id IS NULL"])
+      parent_pjts = Project.where(parent_id: nil)
       parent_pjts.each do |pjt|
         m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
         logger.debug("*** get_user_roles_by_projectid(#{pjt[:id]}) => #{[m_id, role_ids]}")
