@@ -20,7 +20,7 @@ module UsersControllerPatch
 
       #-- [Add] --------------------------
       logger.debug("=================== update_with_autoresetrole")
-      reset_role
+      reset_role || logger.debug("=== FALSE ===")
       #-----------------------------------
 
       @user.safe_attributes = params[:user]
@@ -87,6 +87,16 @@ module UsersControllerPatch
       end
     end
 
+    def is_exist_and_get_id(cls, name)
+      ins = cls.find_by_name(name)
+      logger.debug("***** is_exist?: `#{name}` in #{cls}")
+      if ins.nil?
+        logger.error("ERROR: cannot found `#{name}` in #{cls}.")
+        return nil
+      end
+      ins[:id]
+    end
+
     def reset_role
       logger.debug("################ reset_role #################")
       corp_ucf_name ||= "所属プロジェクト"
@@ -94,9 +104,9 @@ module UsersControllerPatch
       ippan_role_name ||= "一般ユーザ"
 
       logger.debug("----- 各種ID取得")
-      corp_ucf_id ||= UserCustomField.find_by_name(corp_ucf_name)[:id]
-      thd_pjt_id ||= Project.find_by_name(thd_pjt_name)[:id]
-      ippan_role_id ||= Role.find_by_name(ippan_role_name)[:id]
+      corp_ucf_id ||= is_exist_and_get_id(UserCustomField, corp_ucf_name) || return
+      thd_pjt_id ||= is_exist_and_get_id(Project, thd_pjt_name)
+      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name)
       logger.debug("### first: #{corp_ucf_name} => #{corp_ucf_id}")
       logger.debug("### first: #{thd_pjt_name} => #{thd_pjt_id}")
       logger.debug("### first: #{ippan_role_name} => #{ippan_role_id}")
@@ -107,7 +117,7 @@ module UsersControllerPatch
       logger.debug("*** CF-value: #{user_ucf_val} => #{input_ucf_val}")
 
       ### 所属未変更の場合はここで終了
-      return if user_ucf_val.to_s == input_ucf_val
+      return true if user_ucf_val.to_s == input_ucf_val
 
       ### 親プロジェクトから一般ユーザを削除
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
@@ -126,7 +136,7 @@ module UsersControllerPatch
       end
 
       ### 所属なし選択の場合はここで終了
-      return unless input_ucf_val.present?
+      return true unless input_ucf_val.present?
 
       ### 選択した所属に従って、親プロジェクトに一般ユーザを付与
       parent_pjts.each do |pjt|
