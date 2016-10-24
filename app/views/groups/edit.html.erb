@@ -1,15 +1,5 @@
 <h2><%= link_to l(:label_group_plural), groups_path %> &#187; <%= h(@group) %></h2>
 
- <p>groups_path=<%= groups_path %>
- <p>params=<%= params %>
- <p>@tab=<%= @tab %>
- <p>@group=<%= @group %>
- <p>@group_part=<%= @group_part %>
-
-<% if @group_part.present? %>
-<%= hidden_field_tag 'group_part', @group_part %>
-<% end %>
-
 <%= render_tabs group_settings_tabs %>
 
 <% html_title(l(:label_group), @group, l(:label_administration)) -%>

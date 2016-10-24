@@ -1,13 +1,3 @@
- <p>groups_path=<%= groups_path %>
- <p>params=<%= params %>
- <p>@tab=<%= @tab %>
- <p>@groups=<%= @groups.count %>
- <p>@group=<%= @group %>
-
-<% if @tab.present? %>
-<%= hidden_field_tag 'tab', @tab %>
-<% end %>
-
 <% if @groups.any? %>
 <table class="list groups">
   <thead><tr>
