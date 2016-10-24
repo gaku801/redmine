@@ -42,7 +42,8 @@ class UsersController < ApplicationController
 
     @status = params[:status] || 1
 
-    logger.debug("############## controller/user.index ##########")
+    ### add SS
+    logger.debug("############## UserssController.index")
     logger.debug("*** params=#{params}")
     @tab = params[:tab] || ''
     logger.debug("*** @tab=#{@tab}")
@@ -50,8 +51,8 @@ class UsersController < ApplicationController
     logger.debug("*** @parent_pjts=#{@parent_pjts.inspect}")
 
     scope = User.logged.status(@status)
-    logger.debug("############################ tabbed(@tab)")
-    scope = scope.tabbed(@tab) #if @tab.present?
+    scope = scope.tabbed(@tab)
+    logger.debug("#####################################")
     scope = scope.like(params[:name]) if params[:name].present?
     scope = scope.in_group(params[:group_id]) if params[:group_id].present?
 
@@ -59,16 +60,17 @@ class UsersController < ApplicationController
     @user_pages = Paginator.new @user_count, @limit, params['page']
     @offset ||= @user_pages.offset
     @users =  scope.order(sort_clause).limit(@limit).offset(@offset).all
-    logger.debug("###############################################")
 
     respond_to do |format|
       format.html {
         @groups = Group.tabbed(@tab).all.sort
-        #@groups = Group.all.sort
+        # @groups = Group.all.sort
         render :layout => !request.xhr?
       }
       format.api
     end
+    logger.debug("###############################################")
+    ##########
   end
 
   def show

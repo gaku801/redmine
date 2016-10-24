@@ -25,7 +25,8 @@ class GroupsController < ApplicationController
   helper :custom_fields
 
   def index
-    logger.debug("############## controller/groups.index ##########")
+    ### add SS
+    logger.debug("############## GroupsController.index")
     logger.debug("*** params=#{params}")
     @tab = params[:tab] || ''
     logger.debug("*** @tab=#{@tab}")
@@ -33,7 +34,8 @@ class GroupsController < ApplicationController
     logger.debug("*** @parent_pjts=#{@parent_pjts.inspect}")
     @groups = Group.tabbed(@tab).sorted.all
     #@groups = Group.sorted.all
-    logger.debug("#################################################")
+    logger.debug("######################################")
+    ##########
 
     respond_to do |format|
       format.html
@@ -71,12 +73,13 @@ class GroupsController < ApplicationController
   end
 
   def edit
-    logger.debug("############ controller/group.edit")
+    ### add SS
+    logger.debug("############## GroupsController.edit")
     logger.debug("*** @group: #{@group}")
     @group_part = @group.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
     logger.debug("*** @group_part: #{@group_part}, #{@group_part.class}")
-    logger.debug("*** params: #{params}")
-    logger.debug("##################################")
+    logger.debug("###################################")
+    ##########
   end
 
   def update
@@ -104,7 +107,6 @@ class GroupsController < ApplicationController
   end
 
   def add_users
-    logger.debug("############ controller/group.add")
     @users = User.find_all_by_id(params[:user_id] || params[:user_ids])
     @group.users << @users if request.post?
     respond_to do |format|
