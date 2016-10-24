@@ -31,13 +31,20 @@ class Group < Principal
 
   scope :sorted, lambda { order("#{table_name}.lastname ASC") }
   scope :named, lambda {|arg| where("LOWER(#{table_name}.lastname) = LOWER(?)", arg.to_s.strip)}
-  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(arg.blank? ? nil : {:value => arg}))}
 
   safe_attributes 'name',
     'user_ids',
     'custom_field_values',
     'custom_fields',
     :if => lambda {|group, user| user.admin?}
+
+  ### add SS
+  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(arg.blank? ? nil : {:value => arg}))}
+
+  def get_part
+    self.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
+  end
+  ##########
 
   def to_s
     lastname.to_s
@@ -78,10 +85,6 @@ class Group < Principal
       attr_name = "name"
     end
     super(attr_name, *args)
-  end
-
-  def get_part
-    self.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
   end
 
   private

@@ -28,6 +28,7 @@ class Member < ActiveRecord::Base
 
   before_destroy :set_issue_category_nil
 
+  ### add SS
   acts_as_customizable
 
   def get_part
@@ -38,6 +39,7 @@ class Member < ActiveRecord::Base
       Group.find_by_id(user_id).get_part
     end
   end
+  ##########
 
   def role
   end

@@ -736,11 +736,12 @@ class Project < ActiveRecord::Base
     end
   end
 
+  ### add SS
   def get_origin_parent(p=self)
-    logger.debug("##### get_origin_parent; p:#{p}, #{p.parent}")
     return p if p.parent.nil?
     self.get_origin_parent(p.parent)
   end
+  ##########
 
   private
 

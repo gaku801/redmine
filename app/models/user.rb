@@ -78,8 +78,6 @@ class User < Principal
 
   scope :logged, lambda { where("#{User.table_name}.status <> #{STATUS_ANONYMOUS}") }
   scope :status, lambda {|arg| where(arg.blank? ? nil : {:status => arg.to_i}) }
-  #scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(value: arg))}
-  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(arg.blank? ? nil : {:value => arg}))}
 
   acts_as_customizable
 
@@ -117,6 +115,14 @@ class User < Principal
     where("#{User.table_name}.id NOT IN (SELECT gu.user_id FROM #{table_name_prefix}groups_users#{table_name_suffix} gu WHERE gu.group_id = ?)", group_id)
   }
   scope :sorted, lambda { order(*User.fields_for_order_statement)}
+
+  ### add SS
+  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(arg.blank? ? nil : {:value => arg}))}
+
+  def get_part
+    self.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
+  end
+  ##########
 
   def set_mail_notification
     self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
@@ -620,10 +626,6 @@ class User < Principal
         User.where(:id => user.id).update_all(:salt => salt, :hashed_password => hashed_password)
       end
     end
-  end
-
-  def get_part
-    self.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
   end
 
   protected
