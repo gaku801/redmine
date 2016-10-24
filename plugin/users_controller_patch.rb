@@ -6,7 +6,6 @@ module UsersControllerPatch
     base.class_eval do
       unloadable
       alias_method_chain :update, :autoresetrole
-      alias_method_chain :edit_membership, :autoresetrole
     end
   end
 
@@ -18,10 +17,10 @@ module UsersControllerPatch
         @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
       end
 
-      #-- [Add] --------------------------
+      ### add SS
       logger.debug("=================== update_with_autoresetrole")
       reset_role || logger.debug("=== FALSE ===")
-      #-----------------------------------
+      ##########
 
       @user.safe_attributes = params[:user]
       # Was the account actived ? (do it before User#save clears the change)
@@ -57,19 +56,6 @@ module UsersControllerPatch
           format.html { render :action => :edit }
           format.api  { render_validation_errors(@user) }
         end
-      end
-    end
-
-    def edit_membership_with_autoresetrole
-      logger.debug("===================edit_membership_with_autoresetrole")
-      logger.debug(params[:membership_id])
-      logger.debug(params[:membership])
-      logger.debug("==================================")
-      @membership = Member.edit_membership(params[:membership_id], params[:membership], @user)
-      #@membership.save
-      respond_to do |format|
-        format.html { redirect_to edit_user_path(@user, :tab => 'memberships') }
-        format.js
       end
     end
 
