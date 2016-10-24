@@ -1,12 +1,3 @@
- <p>users_path=<%= users_path %>
- <p>params=<%= params %>
- <p>@tab=<%= @tab %>
- <p>@status=<%= @status %>
- <p>@user_count=<%= @user_count %>
- <p>@user_pages=<%= @user_pages.to_yaml %>
- <p>@offset=<%= @offset %>
- <p>@limit=<%= @limit %>
-
 <%= form_tag(users_path, :method => :get) do %>
 <fieldset><legend><%= l(:label_filter_plural) %></legend>
 <label for='status'><%= l(:field_status) %>:</label>
