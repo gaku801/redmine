@@ -30,6 +30,7 @@ class UsersController < ApplicationController
   def index
     sort_init 'login', 'asc'
     sort_update %w(login firstname lastname mail admin created_on last_login_on)
+    #sort_update %w(login firstname lastname mail part admin created_on last_login_on)
 
     case params[:format]
     when 'xml', 'json'
@@ -38,20 +39,32 @@ class UsersController < ApplicationController
       @limit = per_page_option
     end
 
+    logger.debug("############## controller/user.index ##########")
     @status = params[:status] || 1
+    @tab = params[:tab] || ''
 
     scope = User.logged.status(@status)
+    scope = scope.tabbed(@tab) if @tab.present?
     scope = scope.like(params[:name]) if params[:name].present?
     scope = scope.in_group(params[:group_id]) if params[:group_id].present?
+    logger.debug(l(:label_part_parent_project))
+    logger.debug("tab=#{@tab}")
+    logger.debug(scope.class)
+    #scope = scope.joins("LEFT OUTER JOIN custom_values ON custom_values.customized_id = users.id").select("users.*, custom_values.value AS part")
+    #scope = scope.where("custom_values.value = ?", @tab) if @tab.present?
+    #scope = scope.joins("LEFT OUTER JOIN custom_values ON custom_values.customized_id = users.id").merge(CustomValue.where(value: @tab)) if @tab.present?
+    #scope = scope.includes(:custom_values).merge(CustomValue.where(value: @tab)) if @tab.present?
+    logger.debug(scope.to_yaml)
+    logger.debug(scope.class)
 
     @user_count = scope.count
     @user_pages = Paginator.new @user_count, @limit, params['page']
     @offset ||= @user_pages.offset
     @users =  scope.order(sort_clause).limit(@limit).offset(@offset).all
 
-    logger.debug("############## controller/user.index ##########")
     @parent_pjts ||= Project.where(parent_id: nil)
     logger.debug(@parent_pjts.to_yaml)
+    logger.debug(params.to_yaml)
     logger.debug("###############################################")
 
     respond_to do |format|

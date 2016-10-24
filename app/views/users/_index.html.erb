@@ -12,10 +12,16 @@
 <p>@limit=<%= @limit %>
 
 
-<%= form_tag("#{users_path}?tab=#{tab[:name]}", :method => :get) do %>
+<%# form_tag("#{users_path}?tab=#{params[:tab]}", :method => :get) do %>
+<%# form_tag("#{users_path}?tab=#{@tab}", :method => :get) do %>
+<%= form_tag(users_path, :method => :get) do %>
 <fieldset><legend><%= l(:label_filter_plural) %></legend>
 <label for='status'><%= l(:field_status) %>:</label>
 <%= select_tag 'status', users_status_options_for_select(@status), :class => "small", :onchange => "this.form.submit(); return false;"  %>
+
+<% if @tab.present? %>
+<%= hidden_field_tag 'tab', @tab %>
+<% end %>
 
 <% if @groups.present? %>
 <label for='group_id'><%= l(:label_group) %>:</label>
