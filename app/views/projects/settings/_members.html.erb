@@ -1,5 +1,3 @@
- <p>@project.get_origin_parent=<%= @project.get_origin_parent %>
-
 <%= error_messages_for 'member' %>
 <% roles = Role.find_all_givable
    members = @project.member_principals.includes(:roles, :principal).all.sort %>
