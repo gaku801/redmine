@@ -78,7 +78,8 @@ class User < Principal
 
   scope :logged, lambda { where("#{User.table_name}.status <> #{STATUS_ANONYMOUS}") }
   scope :status, lambda {|arg| where(arg.blank? ? nil : {:status => arg.to_i}) }
-  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(value: arg)) }
+  #scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(value: arg))}
+  scope :tabbed, lambda {|arg| includes(:custom_values).merge(CustomValue.where(arg.blank? ? nil : {:value => arg}))}
 
   acts_as_customizable
 
@@ -619,6 +620,10 @@ class User < Principal
         User.where(:id => user.id).update_all(:salt => salt, :hashed_password => hashed_password)
       end
     end
+  end
+
+  def get_part
+    self.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
   end
 
   protected

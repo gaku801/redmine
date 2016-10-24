@@ -2,6 +2,10 @@
 <%= link_to l(:label_user_new), new_user_path, :class => 'icon icon-add' %>
 </div>
 
+<h2><%=l(:label_user_plural)%>
+<% if params[:tab].present? %> >> <%= params[:tab] %><% end %>
+</h2>
+
 <%= render_tabs_users %>
 
-<% html_title(l(:label_user_plural)) -%>
+<% html_title(l(:label_user_plural), @tab) -%>

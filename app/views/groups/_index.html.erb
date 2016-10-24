@@ -1,0 +1,32 @@
+ <p>groups_path=<%= groups_path %>
+ <p>params=<%= params %>
+ <p>@tab=<%= @tab %>
+ <p>@groups=<%= @groups.count %>
+ <p>@group=<%= @group %>
+
+<% if @tab.present? %>
+<%= hidden_field_tag 'tab', @tab %>
+<% end %>
+
+<% if @groups.any? %>
+<table class="list groups">
+  <thead><tr>
+  <th><%=l(:label_group)%></th>
+  <th><%=l(:label_user_plural)%></th>
+  <th><%=l(:label_part_parent_project)%></th>
+  <th></th>
+  </tr></thead>
+  <tbody>
+<% @groups.each do |group| %>
+  <tr class="<%= cycle 'odd', 'even' %>">
+    <td><%= link_to h(group), edit_group_path(group) %></td>
+    <td align="center"><%= group.users.size %></td>
+    <td align="center"><%= h(group.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}) %></td>
+    <td class="buttons"><%= delete_link group %></td>
+  </tr>
+<% end %>
+  </tbody>
+</table>
+<% else %>
+<p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>

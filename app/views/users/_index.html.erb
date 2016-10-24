@@ -1,19 +1,12 @@
-<h2><%=l(:label_user_plural)%>
-<% if tab[:name].present? %> >> <%= tab[:name] %><% end %>
-</h2>
-<p>users_path=<%= users_path %>
-<p><% @users_path_tab = tab[:name] %>
-<p>users_path_tab=<%= "#{users_path}?tab=#{tab[:name]}" %>
-<p>params=<%= params %>
-<p>@status=<%= @status %>
-<p>@user_count=<%= @user_count %>
-<p>@user_pages=<%= @user_pages.to_yaml %>
-<p>@offset=<%= @offset %>
-<p>@limit=<%= @limit %>
+ <p>users_path=<%= users_path %>
+ <p>params=<%= params %>
+ <p>@tab=<%= @tab %>
+ <p>@status=<%= @status %>
+ <p>@user_count=<%= @user_count %>
+ <p>@user_pages=<%= @user_pages.to_yaml %>
+ <p>@offset=<%= @offset %>
+ <p>@limit=<%= @limit %>
 
-
-<%# form_tag("#{users_path}?tab=#{params[:tab]}", :method => :get) do %>
-<%# form_tag("#{users_path}?tab=#{@tab}", :method => :get) do %>
 <%= form_tag(users_path, :method => :get) do %>
 <fieldset><legend><%= l(:label_filter_plural) %></legend>
 <label for='status'><%= l(:field_status) %>:</label>
@@ -56,7 +49,7 @@
   <td class="lastname"><%= h(user.lastname) %></td>
   <td class="firstname"><%= h(user.firstname) %></td>
   <td class="email"><%= mail_to(h(user.mail)) %></td>
-  <td class="part"><%= h(user.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}) %></td>
+  <td class="part"><%= h(user.get_part) %></td>
   <td align="center"><%= checked_image user.admin? %></td>
   <td class="created_on" align="center"><%= format_time(user.created_on) %></td>
   <td class="last_login_on" align="center"><%= format_time(user.last_login_on) unless user.last_login_on.nil? %></td>
@@ -70,5 +63,3 @@
 </table>
 </div>
 <p class="pagination"><%= pagination_links_full @user_pages, @user_count %></p>
-
-<% html_title(l(:label_user_plural)) -%>

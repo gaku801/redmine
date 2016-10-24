@@ -1,0 +1,11 @@
+<div class="contextual">
+<%= link_to l(:label_group_new), new_group_path, :class => 'icon icon-add' %>
+</div>
+
+<h2><%= l(:label_group_plural) %>
+<% if params[:tab].present? %> >> <%= params[:tab] %><% end %>
+</h2>
+
+<%= render_tabs_groups %>
+
+<% html_title(l(:label_group_plural), @tab) -%>

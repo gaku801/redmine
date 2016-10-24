@@ -59,9 +59,4 @@ module UsersHelper
     tabs.concat(@parent_pjts.map{|p| {:name => p[:name], :partial => 'users/index', :label => p[:name]}})
     render :partial => 'users/tabs', :locals => {:tabs => tabs}
   end
-
-  def users_index_tabs
-    tabs = [{:name => '', :partial => 'users/index', :label => l(:label_project_all)}]
-    tabs + @parent_pjts.map{|p| {:name => p[:name], :partial => 'users/index', :label => p[:name]}}
-  end
 end
