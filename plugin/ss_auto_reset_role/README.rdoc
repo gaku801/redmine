@@ -1,0 +1,3 @@
+= ss_auto_reset_role
+
+Description goes here

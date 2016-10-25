@@ -1,0 +1,5 @@
+en:
+  label_part_parent_project: 所属プロジェクト
+  label_thd_pjt_name: THD
+  label_ippan_role_name: 一般ユーザ
+  error_is_not_exist: "`%{value}` is not exist."

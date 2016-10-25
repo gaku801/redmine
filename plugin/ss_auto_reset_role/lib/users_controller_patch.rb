@@ -10,16 +10,57 @@ module UsersControllerPatch
   end
 
   module InstanceMethods
-    def update_with_autoresetrole
-      @user.admin = params[:user][:admin] if params[:user][:admin]
-      @user.login = params[:user][:login] if params[:user][:login]
-      if params[:user][:password].present? && (@user.auth_source_id.nil? || params[:user][:auth_source_id].blank?)
-        @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
+    def index_with_divide
+      sort_init 'login', 'asc'
+      sort_update %w(login firstname lastname mail admin created_on last_login_on)
+      ### ORDER BY part
+      # sort_update %w(login firstname lastname mail part admin created_on last_login_on)
+
+      case params[:format]
+      when 'xml', 'json'
+        @offset, @limit = api_offset_and_limit
+      else
+        @limit = per_page_option
       end
 
-      ### add SS
-      # グループタブページの更新時は処理スキップ
+      @status = params[:status] || 1
+
+      ### add: 個社分離に伴う管理画面改善
+      ### URI: /users
+      logger.debug("############## UserssController.index")
+      logger.debug("*** params=#{params}")
+      @tab = params[:tab] || ''
+      logger.debug("*** @tab=#{@tab}")
+      @parent_pjts ||= Project.where(parent_id: nil)
+      logger.debug("*** @parent_pjts=#{@parent_pjts.inspect}")
+
+      scope = User.logged.status(@status)
+      scope = scope.tabbed(@tab)
+      logger.debug("#####################################")
+      scope = scope.like(params[:name]) if params[:name].present?
+      scope = scope.in_group(params[:group_id]) if params[:group_id].present?
+
+      @user_count = scope.count
+      @user_pages = Paginator.new @user_count, @limit, params['page']
+      @offset ||= @user_pages.offset
+      @users =  scope.order(sort_clause).limit(@limit).offset(@offset).all
+
+      respond_to do |format|
+        format.html {
+          @groups = Group.tabbed(@tab).all.sort
+          ### @groups = Group.all.sort
+          render :layout => !request.xhr?
+        }
+        format.api
+      end
+      ###################################
+    end
+
+    def update_with_autoresetrole
+      ### add: ロール自動アサイン機能
+      ### URI: /users/<id>/edit
       if params[:user][:group_ids].blank?
+        # グループタブページの更新時は処理スキップ
         logger.debug("=================== UsersController: update_with_autoresetrole")
         params[:tab] = 'general'
         logger.debug(params.to_yaml)
@@ -27,12 +68,46 @@ module UsersControllerPatch
         user_ucf_vals = @user.custom_field_values.map{|c| c.to_s}   # cfの実データ
         input_ucf_vals = params[:user][:custom_field_values].values # cfの画面選択値
         logger.debug("*** UCF-values: `#{user_ucf_vals}` => `#{input_ucf_vals}`")
-        # cfのどれかが更新されたらreset_roleに飛ぶ
+        # cfのどれかが更新されたらreset_role_userに飛ぶ
         if user_ucf_vals != input_ucf_vals
-          return unless reset_role
+          return unless reset_role_user
         end
       end
-      ##########
+      ###############################
+
+      # 既存処理(update)
+      update_without_autoresetrole
+    end
+    
+    def update_with_autoresetrole_org
+      #@user.admin = params[:user][:admin] if params[:user][:admin]
+      #@user.login = params[:user][:login] if params[:user][:login]
+      #if params[:user][:password].present? && (@user.auth_source_id.nil? || params[:user][:auth_source_id].blank?)
+      #  @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
+      #end
+
+      ### add: ロール自動アサイン機能
+      if params[:user][:group_ids].blank?
+        # グループタブページの更新時は処理スキップ
+        logger.debug("=================== UsersController: update_with_autoresetrole")
+        params[:tab] = 'general'
+        logger.debug(params.to_yaml)
+        logger.debug("----- cfが変更されたか？")
+        user_ucf_vals = @user.custom_field_values.map{|c| c.to_s}   # cfの実データ
+        input_ucf_vals = params[:user][:custom_field_values].values # cfの画面選択値
+        logger.debug("*** UCF-values: `#{user_ucf_vals}` => `#{input_ucf_vals}`")
+        # cfのどれかが更新されたらreset_role_userに飛ぶ
+        if user_ucf_vals != input_ucf_vals
+          return unless reset_role_user
+        end
+      end
+      ###############################
+
+      @user.admin = params[:user][:admin] if params[:user][:admin]
+      @user.login = params[:user][:login] if params[:user][:login]
+      if params[:user][:password].present? && (@user.auth_source_id.nil? || params[:user][:auth_source_id].blank?)
+        @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
+      end
 
       @user.safe_attributes = params[:user]
       # Was the account actived ? (do it before User#save clears the change)
@@ -73,6 +148,10 @@ module UsersControllerPatch
 
     private
 
+    ### for update_with_autoresetrole
+    # 親プロジェクトのロールリセット、ロール付与で使用
+    # 指定したproject_idにアサインされているロールのm_idとrole_id(s)を返す
+    # 未アサインならm_id=nil, role_ids=[]を返す
     def get_user_roles_by_projectid(project_id)
       u_memberships = @user.memberships.all(:conditions => ["project_id = ?", project_id])
       if u_memberships.present?
@@ -85,6 +164,10 @@ module UsersControllerPatch
       end
     end
 
+    ### for update_with_autoresetrole
+    # 所属プロジェクト、一般ユーザの定義有無チェックで使用
+    # 指定したclsにnameが存在する場合、そのidを返す
+    # 無い場合は500エラーを表示、メッセージは:error_is_not_exist(name)
     def is_exist_and_get_id(cls, name)
       ins = cls.find_by_name(name)
       logger.debug("*** is_exist?: `#{name}` in #{cls}")
@@ -96,8 +179,12 @@ module UsersControllerPatch
       ins[:id]
     end
 
-    def reset_role
-      logger.debug("################ reset_role #################")
+    ### for update_with_autoresetrole
+    #
+    # ロール自動アサイン機能本体
+    #
+    def reset_role_user
+      logger.debug("################ reset_role_user #################")
       logger.debug("*** params=#{params.inspect}")
       logger.debug("*** @user=#{@user.inspect}")
       corp_ucf_name ||= l(:label_part_parent_project) # "所属プロジェクト"
@@ -124,7 +211,7 @@ module UsersControllerPatch
       ### 親プロジェクトから一般ユーザを削除
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
       parent_pjts = Project.where(parent_id: nil)
-      logger.debug("*** parent_pjts: #{parent_pjts}")
+      logger.debug("*** parent_pjts: #{parent_pjts.inspect}")
       parent_pjts.each do |pjt|
         m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
         logger.debug("*** get roles in #{pjt[:name]}(ID: #{pjt[:id]}) => #{[m_id, role_ids]}")
@@ -146,6 +233,7 @@ module UsersControllerPatch
       logger.debug("*** all allowed Project is `#{thd_pjt_name}`, ID=`#{thd_pjt_id}`")
 
       parent_pjts.each do |pjt|
+        ### 親プロジェクト毎に、以下のルールでロール付与
         ### I'm THD. all PJTs OK.
         ### We're allowed THD-PJT.
         ### I'm allowed only My-PJT.
