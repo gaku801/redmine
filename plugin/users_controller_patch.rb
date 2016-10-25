@@ -18,8 +18,20 @@ module UsersControllerPatch
       end
 
       ### add SS
-      logger.debug("=================== update_with_autoresetrole")
-      reset_role || logger.debug("=== FALSE ===")
+      # グループタブページの更新時は処理スキップ
+      if params[:user][:group_ids].blank?
+        logger.debug("=================== UsersController: update_with_autoresetrole")
+        params[:tab] = 'general'
+        logger.debug(params.to_yaml)
+        logger.debug("----- cfが変更されたか？")
+        user_ucf_vals = @user.custom_field_values.map{|c| c.to_s}   # cfの実データ
+        input_ucf_vals = params[:user][:custom_field_values].values # cfの画面選択値
+        logger.debug("*** UCF-values: `#{user_ucf_vals}` => `#{input_ucf_vals}`")
+        # cfのどれかが更新されたらreset_roleに飛ぶ
+        if user_ucf_vals != input_ucf_vals
+          return unless reset_role
+        end
+      end
       ##########
 
       @user.safe_attributes = params[:user]
@@ -78,6 +90,7 @@ module UsersControllerPatch
       logger.debug("*** is_exist?: `#{name}` in #{cls}")
       if ins.nil?
         logger.error("ERROR: cannot found `#{name}` in #{cls}.")
+        render_error l(:error_is_not_exist, name)
         return nil
       end
       ins[:id]
@@ -85,27 +98,33 @@ module UsersControllerPatch
 
     def reset_role
       logger.debug("################ reset_role #################")
-      corp_ucf_name ||= "所属プロジェクト"
-      thd_pjt_name ||= "THD"
-      ippan_role_name ||= "一般ユーザ"
+      logger.debug("*** params=#{params.inspect}")
+      logger.debug("*** @user=#{@user.inspect}")
+      corp_ucf_name ||= l(:label_part_parent_project) # "所属プロジェクト"
+      thd_pjt_name ||= l(:label_thd_pjt_name)         # "THD"
+      ippan_role_name ||= l(:label_ippan_role_name)   # "一般ユーザ"
 
-      ### UserCustomField: `#{corp_ucf_name}` の存在チェック, 無かったら終了
+      ### UserCustomField: 所属プロジェクトの存在チェック, 無かったら終了
+      logger.debug("----- `#{corp_ucf_name}`が存在するか？")
       corp_ucf_id ||= is_exist_and_get_id(UserCustomField, corp_ucf_name) || return
       logger.debug("*** UserCustomField is `#{corp_ucf_name}`, ID=`#{corp_ucf_id}`")
 
+      ### Role: 一般ユーザの存在チェック, 無かったら終了
+      logger.debug("----- `#{ippan_role_name}`が存在するか？")
+      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name) || return
+      logger.debug("*** reset-Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
+
       ### 所属未変更の場合はここで終了
-      logger.debug("----- 画面選択した所属プロジェクトが変更されたか？")
-      input_ucf_val = params[:user][:custom_field_values][corp_ucf_id.to_s]
+      logger.debug("----- 所属プロジェクトが変更されたか？")
       user_ucf_val = @user.custom_field_values.detect{|c| c.custom_field.name == corp_ucf_name}
+      input_ucf_val = params[:user][:custom_field_values][corp_ucf_id.to_s]
       logger.debug("*** UCF-value: `#{user_ucf_val}` => `#{input_ucf_val}`")
       return true if user_ucf_val.to_s == input_ucf_val
 
       ### 親プロジェクトから一般ユーザを削除
-      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name)
-      logger.debug("*** reset Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
-
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
       parent_pjts = Project.where(parent_id: nil)
+      logger.debug("*** parent_pjts: #{parent_pjts}")
       parent_pjts.each do |pjt|
         m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
         logger.debug("*** get roles in #{pjt[:name]}(ID: #{pjt[:id]}) => #{[m_id, role_ids]}")
