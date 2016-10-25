@@ -20,10 +20,11 @@
 module MembersHelper
   def render_principals_for_new_members(project)
     scope = Principal.active.sorted.not_member_of(project).like(params[:q])
-    logger.debug("###### MembersHelper")
-    scope = scope.tabbed('IBS')
-    logger.debug(scope.to_yaml)
-    logger.debug("####################")
+    logger.debug("###### MembersHelper.render_principals_for_new_members")
+    my_part = project.get_origin_parent.to_s # 最上位の親プロジェクト名を取得
+    logger.debug("*** my_part=#{my_part}, #{my_part.class}")
+    scope = scope.tabbed(my_part)
+    logger.debug("######################################################")
     principal_count = scope.count
     principal_pages = Redmine::Pagination::Paginator.new principal_count, 100, params['page']
     principals = scope.offset(principal_pages.offset).limit(principal_pages.per_page).all

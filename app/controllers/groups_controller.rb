@@ -132,6 +132,9 @@ class GroupsController < ApplicationController
   end
 
   def edit_membership
+    logger.debug("################### Group.edit_membership")
+    logger.debug(params.to_yaml)
+    logger.debug(@group)
     @membership = Member.edit_membership(params[:membership_id], params[:membership], @group)
     @membership.save if request.post?
     respond_to do |format|

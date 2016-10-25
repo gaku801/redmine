@@ -30,7 +30,6 @@ module GroupsHelper
     logger.debug("*** group=#{group}")
     logger.debug("*** @group=#{@group}, #{@group.class}")
     logger.debug("*** @group_part=#{@group_part}, #{@group_part.class}")
-    #my_part = @group.custom_field_values.detect{|c| c.custom_field.name == l(:label_part_parent_project)}.to_s
     my_part = @group.get_part	# 所属プロジェクト名を取得
     logger.debug("*** my_part=#{my_part}, #{my_part.class}")
     logger.debug("*** params=#{params}")
@@ -38,7 +37,7 @@ module GroupsHelper
     # userと同じようにtabを渡してあげればここで評価される
     # /groups/330/edit?tab=users の編集画面右側の検索窓をtabでフィルタする
     # User.tabbedはmodelsで定義したので以下でフィルタできる
-    
+
     scope = User.active.sorted.not_in_group(group).like(params[:q])
     scope = scope.tabbed(my_part)
     principal_count = scope.count
