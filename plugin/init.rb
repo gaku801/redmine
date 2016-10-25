@@ -1,13 +1,6 @@
 # encoding: utf-8
-#require 'redmine'
 require 'users_controller_patch'
-
-#Rails.configuration.to_prepare do
-#  require_dependency 'users_controller'
-#  unless UsersController.included_modules.include? UsersControllerPatch
-#    UsersController.send(:include, UsersControllerPatch)
-#  end
-#end
+require 'groups_controller_patch'
 
 Redmine::Plugin.register :ss_separation_and_resetrole do
   name 'SS Kanri Separation and autoreset-Role plugin'
