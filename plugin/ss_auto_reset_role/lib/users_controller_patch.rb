@@ -6,10 +6,77 @@ module UsersControllerPatch
     base.class_eval do
       unloadable
       alias_method_chain :update, :autoresetrole
+      alias_method_chain :create, :autoresetrole
     end
   end
 
   module InstanceMethods
+    def create_with_autoresetrole
+      ### add: ロール自動アサイン機能 #############################
+      #
+      # create時のフック箇所
+      #
+      logger.debug("=================== UsersController: create_with_autoresetrole")
+      logger.debug(params.to_yaml)
+      is_changed_part = false  # 所属プロジェクト変更フラグ
+
+      ### UserCustomField: 所属プロジェクトのIDを取得
+      logger.debug("----- UserCustomField に`所属プロジェクト`が設定されているか？")
+      part_name ||= l(:label_part_parent_project) || "所属プロジェクト"
+      part_id ||= is_exist_and_get_id(UserCustomField, part_name)
+      logger.debug("*** UserCustomField is `#{part_name}`, ID=`#{part_id}`")
+      # 所属プロジェクトが存在しない場合は処理スキップ
+      if part_id.present?
+        ### 所属プロジェクトの画面選択値が設定された場合はフラグtrue
+        new_part = params[:user][:custom_field_values][part_id.to_s]
+        is_changed_part = new_part.present?
+        logger.debug("*** UCF-part is chanded: #{is_changed_part}, `#{new_part}`")
+      end
+      #######################################################################
+
+      @user = User.new(:language => Setting.default_language, :mail_notification => Setting.default_notification_option)
+      @user.safe_attributes = params[:user]
+      @user.admin = params[:user][:admin] || false
+      @user.login = params[:user][:login]
+      @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation] unless @user.auth_source_id
+
+      if @user.save
+        @user.pref.attributes = params[:pref]
+        @user.pref[:no_self_notified] = (params[:no_self_notified] == '1')
+        @user.pref.save
+        @user.notified_project_ids = (@user.mail_notification == 'selected' ? params[:notified_project_ids] : [])
+
+        Mailer.account_information(@user, params[:user][:password]).deliver if params[:send_information]
+
+        ### add: ロール自動アサイン機能 #####################################
+        # 所属プロジェクト変更フラグがtrueならreset_roleに飛ぶ
+        # reset_roleの結果がfalseなら後続スキップ
+        return unless reset_role_user(new_part) if is_changed_part
+        #####################################################################
+
+        respond_to do |format|
+          format.html {
+            flash[:notice] = l(:notice_user_successful_create, :id => view_context.link_to(@user.login, user_path(@user)))
+            if params[:continue]
+              redirect_to new_user_path
+            else
+              redirect_to edit_user_path(@user)
+            end
+          }
+          format.api  { render :action => 'show', :status => :created, :location => user_url(@user) }
+        end
+      else
+        @auth_sources = AuthSource.all
+        # Clear password input
+        @user.password = @user.password_confirmation = nil
+
+        respond_to do |format|
+          format.html { render :action => 'new' }
+          format.api  { render_validation_errors(@user) }
+        end
+      end
+    end
+
     def update_with_autoresetrole
       ### add: ロール自動アサイン機能 #############################
       #
@@ -32,7 +99,7 @@ module UsersControllerPatch
           ### 所属プロジェクトの現在値と画面選択値を比較, フラグ更新
           current_part = @user.custom_field_values.find{|c| c.custom_field.id == part_id}
           new_part = params[:user][:custom_field_values][part_id.to_s]
-          is_changed_part = current_part.to_s != new_part.to_s
+          is_changed_part = current_part.to_s != new_part
           logger.debug("*** UCF-part is chanded: #{is_changed_part}, `#{current_part}` => `#{new_part}`")
         end
       end
