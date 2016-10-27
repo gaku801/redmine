@@ -10,98 +10,33 @@ module UsersControllerPatch
   end
 
   module InstanceMethods
-    def index_with_divide
-      sort_init 'login', 'asc'
-      sort_update %w(login firstname lastname mail admin created_on last_login_on)
-      ### ORDER BY part
-      # sort_update %w(login firstname lastname mail part admin created_on last_login_on)
-
-      case params[:format]
-      when 'xml', 'json'
-        @offset, @limit = api_offset_and_limit
-      else
-        @limit = per_page_option
-      end
-
-      @status = params[:status] || 1
-
-      ### add: 個社分離に伴う管理画面改善
-      ### URI: /users
-      logger.debug("############## UserssController.index")
-      logger.debug("*** params=#{params}")
-      @tab = params[:tab] || ''
-      logger.debug("*** @tab=#{@tab}")
-      @parent_pjts ||= Project.where(parent_id: nil)
-      logger.debug("*** @parent_pjts=#{@parent_pjts.inspect}")
-
-      scope = User.logged.status(@status)
-      scope = scope.tabbed(@tab)
-      logger.debug("#####################################")
-      scope = scope.like(params[:name]) if params[:name].present?
-      scope = scope.in_group(params[:group_id]) if params[:group_id].present?
-
-      @user_count = scope.count
-      @user_pages = Paginator.new @user_count, @limit, params['page']
-      @offset ||= @user_pages.offset
-      @users =  scope.order(sort_clause).limit(@limit).offset(@offset).all
-
-      respond_to do |format|
-        format.html {
-          @groups = Group.tabbed(@tab).all.sort
-          ### @groups = Group.all.sort
-          render :layout => !request.xhr?
-        }
-        format.api
-      end
-      ###################################
-    end
-
     def update_with_autoresetrole
-      ### add: ロール自動アサイン機能
-      ### URI: /users/<id>/edit
+      ### add: ロール自動アサイン機能 #############################
+      #
+      # update時のフック箇所
+      #
+      logger.debug("=================== UsersController: update_with_autoresetrole")
+      logger.debug(params.to_yaml)
+      logger.debug(edit_user_path(@user))
+      is_changed_part = false  # 所属プロジェクト変更フラグ
+
+      # グループタブページの更新時は処理スキップ
       if params[:user][:group_ids].blank?
-        # グループタブページの更新時は処理スキップ
-        logger.debug("=================== UsersController: update_with_autoresetrole")
-        params[:tab] = 'general'
-        logger.debug(params.to_yaml)
-        logger.debug("----- cfが変更されたか？")
-        user_ucf_vals = @user.custom_field_values.map{|c| c.to_s}   # cfの実データ
-        input_ucf_vals = params[:user][:custom_field_values].values # cfの画面選択値
-        logger.debug("*** UCF-values: `#{user_ucf_vals}` => `#{input_ucf_vals}`")
-        # cfのどれかが更新されたらreset_role_userに飛ぶ
-        if user_ucf_vals != input_ucf_vals
-          return unless reset_role_user
+        ### UserCustomField: 所属プロジェクトのIDを取得
+        logger.debug("----- UserCustomField に`所属プロジェクト`が設定されているか？")
+        part_name ||= l(:label_part_parent_project) || "所属プロジェクト"
+        part_id ||= is_exist_and_get_id(UserCustomField, part_name)
+        logger.debug("*** UserCustomField is `#{part_name}`, ID=`#{part_id}`")
+        # 所属プロジェクトが存在しない場合は処理スキップ
+        if part_id.present?
+          ### 所属プロジェクトの現在値と画面選択値を比較, フラグ更新
+          current_part = @user.custom_field_values.find{|c| c.custom_field.id == part_id}
+          new_part = params[:user][:custom_field_values][part_id.to_s]
+          is_changed_part = current_part.to_s != new_part.to_s
+          logger.debug("*** UCF-part is chanded: #{is_changed_part}, `#{current_part}` => `#{new_part}`")
         end
       end
-      ###############################
-
-      # 既存処理(update)
-      update_without_autoresetrole
-    end
-    
-    def update_with_autoresetrole_org
-      #@user.admin = params[:user][:admin] if params[:user][:admin]
-      #@user.login = params[:user][:login] if params[:user][:login]
-      #if params[:user][:password].present? && (@user.auth_source_id.nil? || params[:user][:auth_source_id].blank?)
-      #  @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
-      #end
-
-      ### add: ロール自動アサイン機能
-      if params[:user][:group_ids].blank?
-        # グループタブページの更新時は処理スキップ
-        logger.debug("=================== UsersController: update_with_autoresetrole")
-        params[:tab] = 'general'
-        logger.debug(params.to_yaml)
-        logger.debug("----- cfが変更されたか？")
-        user_ucf_vals = @user.custom_field_values.map{|c| c.to_s}   # cfの実データ
-        input_ucf_vals = params[:user][:custom_field_values].values # cfの画面選択値
-        logger.debug("*** UCF-values: `#{user_ucf_vals}` => `#{input_ucf_vals}`")
-        # cfのどれかが更新されたらreset_role_userに飛ぶ
-        if user_ucf_vals != input_ucf_vals
-          return unless reset_role_user
-        end
-      end
-      ###############################
+      #######################################################################
 
       @user.admin = params[:user][:admin] if params[:user][:admin]
       @user.login = params[:user][:login] if params[:user][:login]
@@ -125,6 +60,12 @@ module UsersControllerPatch
         elsif @user.active? && params[:send_information] && !params[:user][:password].blank? && @user.auth_source_id.nil?
           Mailer.account_information(@user, params[:user][:password]).deliver
         end
+
+        ### add: ロール自動アサイン機能 #####################################
+        # 所属プロジェクト変更フラグがtrueならreset_roleに飛ぶ
+        # reset_roleの結果がfalseなら後続スキップ
+        return unless reset_role_user(new_part) if is_changed_part
+        #####################################################################
 
         respond_to do |format|
           format.html {
@@ -173,7 +114,6 @@ module UsersControllerPatch
       logger.debug("*** is_exist?: `#{name}` in #{cls}")
       if ins.nil?
         logger.error("ERROR: cannot found `#{name}` in #{cls}.")
-        render_error l(:error_is_not_exist, name)
         return nil
       end
       ins[:id]
@@ -183,30 +123,18 @@ module UsersControllerPatch
     #
     # ロール自動アサイン機能本体
     #
-    def reset_role_user
+    def reset_role_user(new_part=nil)
       logger.debug("################ reset_role_user #################")
       logger.debug("*** params=#{params.inspect}")
       logger.debug("*** @user=#{@user.inspect}")
-      corp_ucf_name ||= l(:label_part_parent_project) # "所属プロジェクト"
-      thd_pjt_name ||= l(:label_thd_pjt_name)         # "THD"
-      ippan_role_name ||= l(:label_ippan_role_name)   # "一般ユーザ"
+      ippan_role_name ||= l(:label_ippan_role_name) || "一般ユーザ"
+      thd_pjt_name ||= l(:label_thd_pjt_name) || "THD"
 
-      ### UserCustomField: 所属プロジェクトの存在チェック, 無かったら終了
-      logger.debug("----- `#{corp_ucf_name}`が存在するか？")
-      corp_ucf_id ||= is_exist_and_get_id(UserCustomField, corp_ucf_name) || return
-      logger.debug("*** UserCustomField is `#{corp_ucf_name}`, ID=`#{corp_ucf_id}`")
-
-      ### Role: 一般ユーザの存在チェック, 無かったら終了
+      ### Role: 一般ユーザのIDを取得, 無かったら500エラーでreturn
       logger.debug("----- `#{ippan_role_name}`が存在するか？")
-      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name) || return
+      ippan_role_id ||= is_exist_and_get_id(Role, ippan_role_name)
       logger.debug("*** reset-Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
-
-      ### 所属未変更の場合はここで終了
-      logger.debug("----- 所属プロジェクトが変更されたか？")
-      user_ucf_val = @user.custom_field_values.detect{|c| c.custom_field.name == corp_ucf_name}
-      input_ucf_val = params[:user][:custom_field_values][corp_ucf_id.to_s]
-      logger.debug("*** UCF-value: `#{user_ucf_val}` => `#{input_ucf_val}`")
-      return true if user_ucf_val.to_s == input_ucf_val
+      (render_error l(:error_is_not_exist, ippan_role_name); return false) unless ippan_role_id.present?
 
       ### 親プロジェクトから一般ユーザを削除
       logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
@@ -226,18 +154,15 @@ module UsersControllerPatch
       end
 
       ### 所属なし選択の場合はここで終了
-      return true unless input_ucf_val.present?
+      return true unless new_part.present?
 
       ### 選択した所属に従って、親プロジェクトに一般ユーザを付与
-      thd_pjt_id ||= is_exist_and_get_id(Project, thd_pjt_name)
-      logger.debug("*** all allowed Project is `#{thd_pjt_name}`, ID=`#{thd_pjt_id}`")
-
       parent_pjts.each do |pjt|
         ### 親プロジェクト毎に、以下のルールでロール付与
-        ### I'm THD. all PJTs OK.
-        ### We're allowed THD-PJT.
-        ### I'm allowed only My-PJT.
-        if input_ucf_val == thd_pjt_name || pjt[:name] == thd_pjt_name || pjt[:name] == input_ucf_val
+        # 1) I'm THD. all PJTs OK.
+        # 2) We're allowed THD-PJT.
+        # 3) I'm allowed only My-PJT.
+        if new_part == thd_pjt_name || pjt[:name] == thd_pjt_name || pjt[:name] == new_part
           logger.debug("----- 一般ユーザを付与: #{pjt[:name]}")
           m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
           role_ids.push(ippan_role_id)
