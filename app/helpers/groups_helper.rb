@@ -54,7 +54,7 @@ module GroupsHelper
   end
 
   def render_tabs_groups
-    tabs = [{:name => '', :partial => 'groups/index', :label => l(:label_project_all)}]
+    tabs = [{:name => '', :partial => 'groups/index', :label => l(:label_all_groups)}]
     tabs.concat(@parent_pjts.map{|p| {:name => p[:name], :partial => 'groups/index', :label => p[:name]}})
     render :partial => 'groups/tabs', :locals => {:tabs => tabs}
   end
