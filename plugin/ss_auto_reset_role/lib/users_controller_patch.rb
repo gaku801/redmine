@@ -203,22 +203,35 @@ module UsersControllerPatch
       logger.debug("*** reset-Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
       (render_error l(:error_is_not_exist, ippan_role_name); return false) unless ippan_role_id.present?
 
-      ### 親プロジェクトから一般ユーザを削除
-      logger.debug("----- 親プロジェクトにアサインされたロール一覧を取得")
+      ### 親プロジェクトから全ロールを削除
+      logger.debug("----- 親プロジェクトにアサインされたロールを削除")
+      logger.debug("*** @user.memberships: #{@user.memberships}")
       parent_pjts = Project.where(parent_id: nil)
       logger.debug("*** parent_pjts: #{parent_pjts.inspect}")
       parent_pjts.each do |pjt|
-        m_id, role_ids = get_user_roles_by_projectid(pjt[:id])
-        logger.debug("*** get roles in #{pjt[:name]}(ID: #{pjt[:id]}) => #{[m_id, role_ids]}")
-
-        ### 親プロジェクトにアサイン＆一般ユーザが存在の場合
-        if m_id.present? && role_ids.delete(ippan_role_id)
-          logger.debug("----- 一般ユーザを削除: #{pjt[:name]}")
-          logger.debug("*** changed role_ids: #{role_ids}")
-          membership = Member.edit_membership(m_id, {"role_ids" => role_ids}, @user)
-          membership.save
+        m = Member.find_by_project_id_and_user_id(pjt[:id], @user[:id])
+        if m.present?
+          logger.debug("----- 親プロジェクトのロールを削除: #{pjt[:name]}")
+          logger.debug("*** delete menbership: member_id=#{m[:id]}, project_id=#{m[:project_id]}")
+          m.destroy
         end
       end
+
+      ### 残ったロールを削除
+      limit = 5
+      now_memberships = Member.all(:conditions => ["user_id = ?", @user[:id]])
+      while now_memberships.present? && limit > 0
+        logger.debug("----- 子プロジェクトのロールを削除: loop_limit[#{limit}]")
+        logger.debug("*** now_memberships: #{now_memberships}")
+        now_memberships.each do |m|
+          if m.deletable?
+            logger.debug("*** delete menbership: member_id=#{m[:id]}, project_id=#{m[:project_id]}")
+            m.destroy
+          end
+        end
+        limit -= 1
+        now_memberships = Member.all(:conditions => ["user_id = ?", @user[:id]])
+      end 
 
       ### 所属なし選択の場合はここで終了
       return true unless new_part.present?
