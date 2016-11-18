@@ -196,6 +196,8 @@ module UsersControllerPatch
       logger.debug("*** @user=#{@user.inspect}")
       ippan_role_name ||= l(:label_ippan_role_name) || "一般ユーザ"
       thd_pjt_name ||= l(:label_thd_pjt_name) || "THD"
+      parent_pjts = Project.where(parent_id: nil)
+      logger.debug("*** parent_pjts: #{parent_pjts.inspect}")
 
       ### Role: 一般ユーザのIDを取得, 無かったら500エラーでreturn
       logger.debug("----- `#{ippan_role_name}`が存在するか？")
@@ -203,35 +205,38 @@ module UsersControllerPatch
       logger.debug("*** reset-Role is `#{ippan_role_name}`, ID=`#{ippan_role_id}`")
       (render_error l(:error_is_not_exist, ippan_role_name); return false) unless ippan_role_id.present?
 
-      ### 親プロジェクトから全ロールを削除
-      logger.debug("----- 親プロジェクトにアサインされたロールを削除")
-      logger.debug("*** @user.memberships: #{@user.memberships}")
-      parent_pjts = Project.where(parent_id: nil)
-      logger.debug("*** parent_pjts: #{parent_pjts.inspect}")
-      parent_pjts.each do |pjt|
-        m = Member.find_by_project_id_and_user_id(pjt[:id], @user[:id])
-        if m.present?
-          logger.debug("----- 親プロジェクトのロールを削除: #{pjt[:name]}")
-          logger.debug("*** delete menbership: member_id=#{m[:id]}, project_id=#{m[:project_id]}")
-          m.destroy
-        end
-      end
+      ### role_all_deleteがfalseの場合はロール削除無しモード 
+      logger.debug("*** role-delete-mode is #{l(:role_all_delete)}")
+      if l(:role_all_reset)
 
-      ### 残ったロールを削除
-      limit = 5
-      now_memberships = Member.all(:conditions => ["user_id = ?", @user[:id]])
-      while now_memberships.present? && limit > 0
-        logger.debug("----- 子プロジェクトのロールを削除: loop_limit[#{limit}]")
-        logger.debug("*** now_memberships: #{now_memberships}")
-        now_memberships.each do |m|
-          if m.deletable?
+        ### 親プロジェクトから全ロールを削除
+        logger.debug("----- 親プロジェクトにアサインされたロールを削除")
+        logger.debug("*** @user.memberships: #{@user.memberships}")
+        parent_pjts.each do |pjt|
+          m = Member.find_by_project_id_and_user_id(pjt[:id], @user[:id])
+          if m.present?
+            logger.debug("----- 親プロジェクトのロールを削除: #{pjt[:name]}")
             logger.debug("*** delete menbership: member_id=#{m[:id]}, project_id=#{m[:project_id]}")
             m.destroy
           end
         end
-        limit -= 1
+
+        ### 残ったロールを削除
+        limit = 5
         now_memberships = Member.all(:conditions => ["user_id = ?", @user[:id]])
-      end 
+        while now_memberships.present? && limit > 0
+          logger.debug("----- 子プロジェクトのロールを削除: loop_limit[#{limit}]")
+          logger.debug("*** now_memberships: #{now_memberships}")
+          now_memberships.each do |m|
+            if m.deletable?
+              logger.debug("*** delete menbership: member_id=#{m[:id]}, project_id=#{m[:project_id]}")
+              m.destroy
+            end
+          end
+          limit -= 1
+          now_memberships = Member.all(:conditions => ["user_id = ?", @user[:id]])
+        end 
+      end
 
       ### 所属なし選択の場合はここで終了
       return true unless new_part.present?
