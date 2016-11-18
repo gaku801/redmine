@@ -1119,6 +1119,6 @@ ja:
   field_inherit_members: メンバーを継承
   field_closed_on: 終了日
   label_total_time: 合計
-  label_part_parent_project: 所属プロジェクト
+  label_part_parent_project: 所属親プロジェクト
   label_all_users: 全ユーザー
   label_all_groups: 全グループ

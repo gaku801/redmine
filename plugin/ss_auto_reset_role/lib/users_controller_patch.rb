@@ -18,16 +18,16 @@ module UsersControllerPatch
       #
       logger.debug("=================== UsersController: create_with_autoresetrole")
       logger.debug(params.to_yaml)
-      is_changed_part = false  # 所属プロジェクト変更フラグ
+      is_changed_part = false  # 所属親プロジェクト変更フラグ
 
-      ### UserCustomField: 所属プロジェクトのIDを取得
-      logger.debug("----- UserCustomField に`所属プロジェクト`が設定されているか？")
-      part_name ||= l(:label_part_parent_project) || "所属プロジェクト"
+      ### UserCustomField: 所属親プロジェクトのIDを取得
+      logger.debug("----- UserCustomField に`所属親プロジェクト`が設定されているか？")
+      part_name ||= l(:label_part_parent_project) || "所属親プロジェクト"
       part_id ||= is_exist_and_get_id(UserCustomField, part_name)
       logger.debug("*** UserCustomField is `#{part_name}`, ID=`#{part_id}`")
-      # 所属プロジェクトが存在しない場合は処理スキップ
+      # 所属親プロジェクトが存在しない場合は処理スキップ
       if part_id.present?
-        ### 所属プロジェクトの画面選択値が設定された場合はフラグtrue
+        ### 所属親プロジェクトの画面選択値が設定された場合はフラグtrue
         new_part = params[:user][:custom_field_values][part_id.to_s]
         is_changed_part = new_part.present?
         logger.debug("*** UCF-part is chanded: #{is_changed_part}, `#{new_part}`")
@@ -49,7 +49,7 @@ module UsersControllerPatch
         Mailer.account_information(@user, params[:user][:password]).deliver if params[:send_information]
 
         ### add: ロール自動アサイン機能 #####################################
-        # 所属プロジェクト変更フラグがtrueならreset_roleに飛ぶ
+        # 所属親プロジェクト変更フラグがtrueならreset_roleに飛ぶ
         # reset_roleの結果がfalseなら後続スキップ
         return unless reset_role_user(new_part) if is_changed_part
         #####################################################################
@@ -85,18 +85,18 @@ module UsersControllerPatch
       logger.debug("=================== UsersController: update_with_autoresetrole")
       logger.debug(params.to_yaml)
       logger.debug(edit_user_path(@user))
-      is_changed_part = false  # 所属プロジェクト変更フラグ
+      is_changed_part = false  # 所属親プロジェクト変更フラグ
 
       # グループタブページの更新時は処理スキップ
       if params[:user][:group_ids].blank?
-        ### UserCustomField: 所属プロジェクトのIDを取得
-        logger.debug("----- UserCustomField に`所属プロジェクト`が設定されているか？")
-        part_name ||= l(:label_part_parent_project) || "所属プロジェクト"
+        ### UserCustomField: 所属親プロジェクトのIDを取得
+        logger.debug("----- UserCustomField に`所属親プロジェクト`が設定されているか？")
+        part_name ||= l(:label_part_parent_project) || "所属親プロジェクト"
         part_id ||= is_exist_and_get_id(UserCustomField, part_name)
         logger.debug("*** UserCustomField is `#{part_name}`, ID=`#{part_id}`")
-        # 所属プロジェクトが存在しない場合は処理スキップ
+        # 所属親プロジェクトが存在しない場合は処理スキップ
         if part_id.present?
-          ### 所属プロジェクトの現在値と画面選択値を比較, フラグ更新
+          ### 所属親プロジェクトの現在値と画面選択値を比較, フラグ更新
           current_part = @user.custom_field_values.find{|c| c.custom_field.id == part_id}
           new_part = params[:user][:custom_field_values][part_id.to_s]
           is_changed_part = current_part.to_s != new_part
@@ -129,7 +129,7 @@ module UsersControllerPatch
         end
 
         ### add: ロール自動アサイン機能 #####################################
-        # 所属プロジェクト変更フラグがtrueならreset_roleに飛ぶ
+        # 所属親プロジェクト変更フラグがtrueならreset_roleに飛ぶ
         # reset_roleの結果がfalseなら後続スキップ
         return unless reset_role_user(new_part) if is_changed_part
         #####################################################################
@@ -173,7 +173,7 @@ module UsersControllerPatch
     end
 
     ### for update_with_autoresetrole
-    # 所属プロジェクト、一般ユーザの定義有無チェックで使用
+    # 所属親プロジェクト、一般ユーザの定義有無チェックで使用
     # 指定したclsにnameが存在する場合、そのidを返す
     # 無い場合は500エラーを表示、メッセージは:error_is_not_exist(name)
     def is_exist_and_get_id(cls, name)
