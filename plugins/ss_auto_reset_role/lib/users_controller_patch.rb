@@ -207,7 +207,7 @@ module UsersControllerPatch
 
       ### role_all_deleteがfalseの場合はロール削除無しモード 
       logger.debug("*** role-delete-mode is #{l(:role_all_delete)}")
-      if l(:role_all_reset)
+      if l(:role_all_delete)
 
         ### 親プロジェクトから全ロールを削除
         logger.debug("----- 親プロジェクトにアサインされたロールを削除")
