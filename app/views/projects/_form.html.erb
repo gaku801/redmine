@@ -18,7 +18,11 @@
 <% end %>
 
 <% if @project.safe_attribute? 'inherit_members' %>
-<p><%= f.check_box :inherit_members, {:checked => true} %></p>
+  <% if @project.id.nil? %>
+    <p><%= f.check_box :inherit_members, {:checked => true} %></p>
+  <% else %>
+    <p><%= f.check_box :inherit_members %></p>
+  <% end %>
 <% end %>
 
 <%= wikitoolbar_for 'project_description' %>
