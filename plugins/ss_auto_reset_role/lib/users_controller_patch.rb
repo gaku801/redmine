@@ -87,8 +87,8 @@ module UsersControllerPatch
       logger.debug(edit_user_path(@user))
       is_changed_part = false  # 所属親プロジェクト変更フラグ
 
-      # グループタブページの更新時は処理スキップ
-      if params[:user][:group_ids].blank?
+      # ユーザーロック時、グループタブページの更新時は処理スキップ
+      if params[:user][:custom_field_values].present?
         ### UserCustomField: 所属親プロジェクトのIDを取得
         logger.debug("----- UserCustomField に`所属親プロジェクト`が設定されているか？")
         part_name ||= l(:label_part_parent_project) || "所属親プロジェクト"
