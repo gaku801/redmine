@@ -209,6 +209,13 @@ module UsersControllerPatch
       logger.debug("*** role-delete-mode is #{l(:role_all_delete)}")
       if l(:role_all_delete)
 
+        ### 所属グループ全て削除
+        logger.debug("----- 所属グループから削除")
+        logger.debug("*** @user.group_ids=#{@user.group_ids}")
+        @user.groups.each do |g|
+          g.users.delete(User.find(@user.id))
+        end
+
         ### 親プロジェクトから全ロールを削除
         logger.debug("----- 親プロジェクトにアサインされたロールを削除")
         logger.debug("*** @user.memberships: #{@user.memberships}")
